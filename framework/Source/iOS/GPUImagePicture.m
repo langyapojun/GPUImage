@@ -73,6 +73,17 @@
     return [self initWithCGImage:[newImageSource CGImage] smoothlyScaleOutput:smoothlyScaleOutput removePremultiplication:removePremultiplication];
 }
 
+/*
+ 基本思路就是：
+ 1、获取图片适合的宽高（不能超出OpenGL ES允许的最大纹理宽高）
+ 2、如果使用了smoothlyScaleOutput，需要调整宽高为接近2的幂的值，调整后必须重绘；
+ 3、如果不用重绘，则获取大小端、alpha等信息；
+ 4、需要重绘，则使用CoreGraphics重绘；
+ 5、根据是否需要去除预乘alpha选项，决定是否去除预乘alpha；
+ 6、由调整后的数据生成纹理缓存对象；
+ 7、根据shouldSmoothlyScaleOutput选项决定是否生成mipmaps；
+ 8、最后释放资源。
+ */
 - (id)initWithCGImage:(CGImageRef)newImageSource smoothlyScaleOutput:(BOOL)smoothlyScaleOutput removePremultiplication:(BOOL)removePremultiplication;
 {
     if (!(self = [super init]))
@@ -305,22 +316,25 @@
     hasProcessedImage = NO;
 }
 
+// 处理图片
 - (void)processImage;
 {
     [self processImageWithCompletionHandler:nil];
 }
 
+// 处理图片，可以传入处理完回调的block
 - (BOOL)processImageWithCompletionHandler:(void (^)(void))completion;
 {
     hasProcessedImage = YES;
     
     //    dispatch_semaphore_wait(imageUpdateSemaphore, DISPATCH_TIME_FOREVER);
-    
+     // 如果计数器小于1便立即返回。计数器大于等于1的时候，使计数器减1，并且往下执行
     if (dispatch_semaphore_wait(imageUpdateSemaphore, DISPATCH_TIME_NOW) != 0)
     {
         return NO;
     }
     
+    // 传递Framebuffer给所有targets处理
     runAsynchronouslyOnVideoProcessingQueue(^{        
         for (id<GPUImageInput> currentTarget in targets)
         {
@@ -333,8 +347,10 @@
             [currentTarget newFrameReadyAtTime:kCMTimeIndefinite atIndex:textureIndexOfTarget];
         }
         
+        // 执行完，计数器加1
         dispatch_semaphore_signal(imageUpdateSemaphore);
         
+        // 有block，执行block
         if (completion != nil) {
             completion();
         }
@@ -343,6 +359,7 @@
     return YES;
 }
 
+// 由响应链的final filter生成UIImage图像
 - (void)processImageUpToFilter:(GPUImageOutput<GPUImageInput> *)finalFilterInChain withCompletionHandler:(void (^)(UIImage *processedImage))block;
 {
     [finalFilterInChain useNextFrameForImageCapture];
@@ -352,6 +369,7 @@
     }];
 }
 
+// 输出图片大小，由于图像大小可能被调整（详见初始化方法）。因此，提供了获取图像大小的方法
 - (CGSize)outputImageSize;
 {
     return pixelSizeOfImage;

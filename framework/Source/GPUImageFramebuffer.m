@@ -40,12 +40,14 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size);
 		return nil;
     }
     
+    // 纹理选项
     _textureOptions = fboTextureOptions;
     _size = framebufferSize;
     framebufferReferenceCount = 0;
     referenceCountingDisabled = NO;
     _missingFramebuffer = onlyGenerateTexture;
 
+    // 如果只生成纹理缓存，则不生成帧缓存
     if (_missingFramebuffer)
     {
         runSynchronouslyOnVideoProcessingQueue(^{
@@ -54,6 +56,7 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size);
             framebuffer = 0;
         });
     }
+    // 既生成纹理缓存又生成帧缓存
     else
     {
         [self generateFramebuffer];
@@ -89,6 +92,7 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size);
 
 - (id)initWithSize:(CGSize)framebufferSize;
 {
+    // 提供默认纹理选项
     GPUTextureOptions defaultTextureOptions;
     defaultTextureOptions.minFilter = GL_LINEAR;
     defaultTextureOptions.magFilter = GL_LINEAR;
@@ -98,6 +102,7 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size);
     defaultTextureOptions.format = GL_BGRA;
     defaultTextureOptions.type = GL_UNSIGNED_BYTE;
 
+    // 根据默认纹理选项以及强制生成帧缓存和纹理福建进行相关初始化
     if (!(self = [self initWithSize:framebufferSize textureOptions:defaultTextureOptions onlyTexture:NO]))
     {
 		return nil;
@@ -239,16 +244,17 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size);
 
 #pragma mark -
 #pragma mark Usage
-
+// 激活。在使用帧缓存的时候首先要激活（即绑定为当前帧缓存），激活之后才能在当前帧缓存上进行相关操作。
 - (void)activateFramebuffer;
 {
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    // 激活的时候需要设置视口大小
     glViewport(0, 0, (int)_size.width, (int)_size.height);
 }
 
 #pragma mark -
 #pragma mark Reference counting
-
+// 开启引用计数后，每次调用 lock 方法后，引用计数加一
 - (void)lock;
 {
     if (referenceCountingDisabled)
@@ -259,6 +265,7 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size);
     framebufferReferenceCount++;
 }
 
+// 开启引用计数后，当引用计数小于1的时候，会调用 returnFramebufferToCache 函数把自己放回 GPUImageFramebufferCache 中，便于之后的使用，并不会销毁帧缓存。销毁帧缓存是通过 destroyFramebuffer 函数，该函数是私有函数，未在头文件中公开，在 dealloc 中被调用。
 - (void)unlock;
 {
     if (referenceCountingDisabled)
@@ -306,6 +313,7 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size)
     [[GPUImageContext sharedFramebufferCache] removeFramebufferFromActiveImageCaptureList:framebuffer];
 }
 
+// 从帧缓存中生成图片。在读取图片数据的时候，根据设备是否支持 CoreVideo 框架，GPUImage 会选择使用 CVPixelBufferGetBaseAddress 或者 glReadPixels 读取帧缓存中的数据。最后通过 CGImageCreate，创建 CGImage 对象并返回该对象
 - (CGImageRef)newCGImageFromFramebufferContents;
 {
     // a CGImage can only be created from a 'normal' color texture
@@ -314,25 +322,33 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size)
     
     __block CGImageRef cgImageFromBytes;
     
+    // 在VideoProcessingQueue中进行同步处理
     runSynchronouslyOnVideoProcessingQueue(^{
+        // 设置OpenGLES上下文
         [GPUImageContext useImageProcessingContext];
         
+        // 图片的总大小 = 帧缓存大小 * 每个像素点字节数
         NSUInteger totalBytesForImage = (int)_size.width * (int)_size.height * 4;
         // It appears that the width of a texture must be padded out to be a multiple of 8 (32 bytes) if reading from it using a texture cache
         
         GLubyte *rawImagePixels;
         
         CGDataProviderRef dataProvider = NULL;
+        // 判断是否支持CoreVideo的快速纹理上传
         if ([GPUImageContext supportsFastTextureUpload])
         {
 #if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE
+            // 图像宽度 = 每行图像数据大小 / 每个像素点字节数
             NSUInteger paddedWidthOfImage = CVPixelBufferGetBytesPerRow(renderTarget) / 4.0;
+            // 图像大小 = 图像宽度 * 高度 * 每个像素点字节数
             NSUInteger paddedBytesForImage = paddedWidthOfImage * (int)_size.height * 4;
-            
+            // 等待OpenGL指令执行完成，与glFlush有区别
             glFinish();
             CFRetain(renderTarget); // I need to retain the pixel buffer here and release in the data source callback to prevent its bytes from being prematurely deallocated during a photo write operation
             [self lockForReading];
             rawImagePixels = (GLubyte *)CVPixelBufferGetBaseAddress(renderTarget);
+            
+            // 创建CGDataProviderRef对象
             dataProvider = CGDataProviderCreateWithData((__bridge_retained void*)self, rawImagePixels, paddedBytesForImage, dataProviderUnlockCallback);
             [[GPUImageContext sharedFramebufferCache] addFramebufferToActiveImageCaptureList:self]; // In case the framebuffer is swapped out on the filter, need to have a strong reference to it somewhere for it to hang on while the image is in existence
 #else
@@ -340,10 +356,15 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size)
         }
         else
         {
+            // 激活帧缓存
             [self activateFramebuffer];
             rawImagePixels = (GLubyte *)malloc(totalBytesForImage);
+            
+            // 从当前的帧缓存读取图片数据
             glReadPixels(0, 0, (int)_size.width, (int)_size.height, GL_RGBA, GL_UNSIGNED_BYTE, rawImagePixels);
+            // 创建CGDataProvider
             dataProvider = CGDataProviderCreateWithData(NULL, rawImagePixels, totalBytesForImage, dataProviderReleaseCallback);
+            // 读取到数据之后不需要再持有帧缓存
             [self unlock]; // Don't need to keep this around anymore
         }
         
@@ -352,16 +373,19 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size)
         if ([GPUImageContext supportsFastTextureUpload])
         {
 #if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE
+            // 创建CGImage对象
             cgImageFromBytes = CGImageCreate((int)_size.width, (int)_size.height, 8, 32, CVPixelBufferGetBytesPerRow(renderTarget), defaultRGBColorSpace, kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst, dataProvider, NULL, NO, kCGRenderingIntentDefault);
 #else
 #endif
         }
         else
         {
+            // 创建CGImage对象
             cgImageFromBytes = CGImageCreate((int)_size.width, (int)_size.height, 8, 32, 4 * (int)_size.width, defaultRGBColorSpace, kCGBitmapByteOrderDefault | kCGImageAlphaLast, dataProvider, NULL, NO, kCGRenderingIntentDefault);
         }
         
         // Capture image with current device orientation
+        // 释放数据
         CGDataProviderRelease(dataProvider);
         CGColorSpaceRelease(defaultRGBColorSpace);
         
@@ -381,7 +405,7 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size)
 
 #pragma mark -
 #pragma mark Raw data bytes
-
+// 获取帧缓存原始数据相关的方法。如果设备支持 CoreVideo框架，获取纹理数据的相关操作会调用下面的这些方法。详细见 newCGImageFromFramebufferContents 方法。
 - (void)lockForReading
 {
 #if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE
@@ -389,6 +413,7 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size)
     {
         if (readLockCount == 0)
         {
+            // 在访问CPU的像素数据之前，必须调用CVPixelBufferLockBaseAddress
             CVPixelBufferLockBaseAddress(renderTarget, 0);
         }
         readLockCount++;
@@ -405,6 +430,7 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size)
         readLockCount--;
         if (readLockCount == 0)
         {
+            // 访问结束后，必须调用CVPixelBufferUnlockBaseAddress
             CVPixelBufferUnlockBaseAddress(renderTarget, 0);
         }
     }
@@ -416,6 +442,7 @@ void dataProviderUnlockCallback (void *info, const void *data, size_t size)
     if ([GPUImageContext supportsFastTextureUpload])
     {
 #if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE
+        // 获取每行数据大小
         return CVPixelBufferGetBytesPerRow(renderTarget);
 #else
         return _size.width * 4; // TODO: do more with this on the non-texture-cache side

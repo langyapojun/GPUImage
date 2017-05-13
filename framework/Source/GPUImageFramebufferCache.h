@@ -2,6 +2,8 @@
 #import <QuartzCore/QuartzCore.h>
 #import "GPUImageFramebuffer.h"
 
+//GPUImageFramebufferCache类核心的职责是管理GPUImageFramebuffer对象。
+
 @interface GPUImageFramebufferCache : NSObject
 
 // Framebuffer management

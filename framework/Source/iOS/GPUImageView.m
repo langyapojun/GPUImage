@@ -53,6 +53,14 @@
 	return [CAEAGLLayer class];
 }
 
+/*
+ 1、设置OpenGL ES的相关属性；
+ 2、创建着色器程序；
+ 3、获取属性变量、统一变量的位置；
+ 4、设置清屏颜色；
+ 5、创建默认的帧缓存、渲染缓存，用于图像的显示；
+ 6、根据填充模式调整顶点坐标。
+ */
 - (id)initWithFrame:(CGRect)frame
 {
     if (!(self = [super initWithFrame:frame]))
@@ -221,6 +229,7 @@
     glViewport(0, 0, (GLint)_sizeInPixels.width, (GLint)_sizeInPixels.height);
 }
 
+// 显示帧缓存
 - (void)presentFramebuffer;
 {
     glBindRenderbuffer(GL_RENDERBUFFER, displayRenderbuffer);
@@ -288,6 +297,7 @@
     backgroundColorAlpha = alphaComponent;
 }
 
+// 根据旋转模式获取纹理坐标
 + (const GLfloat *)textureCoordinatesForRotation:(GPUImageRotationMode)rotationMode;
 {
 //    static const GLfloat noRotationTextureCoordinates[] = {
@@ -368,13 +378,14 @@
 
 #pragma mark -
 #pragma mark GPUInput protocol
-
+// 覆盖父类的方法，作用是负责OpenGL的图形绘制，并显示在屏幕上
 - (void)newFrameReadyAtTime:(CMTime)frameTime atIndex:(NSInteger)textureIndex;
 {
     runSynchronouslyOnVideoProcessingQueue(^{
         [GPUImageContext setActiveShaderProgram:displayProgram];
         [self setDisplayFramebuffer];
         
+        // 清屏
         glClearColor(backgroundColorRed, backgroundColorGreen, backgroundColorBlue, backgroundColorAlpha);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
@@ -385,8 +396,10 @@
         glVertexAttribPointer(displayPositionAttribute, 2, GL_FLOAT, 0, 0, imageVertices);
         glVertexAttribPointer(displayTextureCoordinateAttribute, 2, GL_FLOAT, 0, 0, [GPUImageView textureCoordinatesForRotation:inputRotation]);
         
+        // 绘制
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         
+        // 显示
         [self presentFramebuffer];
         [inputFramebufferForDisplay unlock];
         inputFramebufferForDisplay = nil;

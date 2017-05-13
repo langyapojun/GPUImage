@@ -44,18 +44,23 @@
 @property (readonly, nonatomic) BOOL videoEncodingIsFinished;
 
 /// @name Initialization and teardown
+// 可以通过NSURL、AVPlayerItem、AVAsset初始化。
 - (id)initWithAsset:(AVAsset *)asset;
 - (id)initWithPlayerItem:(AVPlayerItem *)playerItem;
 - (id)initWithURL:(NSURL *)url;
 - (void)yuvConversionSetup;
 
 /// @name Movie processing
+// 允许使用GPUImageMovieWriter进行音视频同步编码
 - (void)enableSynchronizedEncodingUsingMovieWriter:(GPUImageMovieWriter *)movieWriter;
+// 读取音视频
 - (BOOL)readNextVideoFrameFromOutput:(AVAssetReaderOutput *)readerVideoTrackOutput;
 - (BOOL)readNextAudioSampleFromOutput:(AVAssetReaderOutput *)readerAudioTrackOutput;
+// 开始、结束、取消读取
 - (void)startProcessing;
 - (void)endProcessing;
 - (void)cancelProcessing;
+// 处理视频帧
 - (void)processMovieFrame:(CMSampleBufferRef)movieSampleBuffer; 
 
 @end

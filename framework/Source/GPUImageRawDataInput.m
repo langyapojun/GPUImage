@@ -66,11 +66,14 @@
 
 - (void)uploadBytes:(GLubyte *)bytesToUpload;
 {
+    // 设置上下文对象
     [GPUImageContext useImageProcessingContext];
 
     // TODO: This probably isn't right, and will need to be corrected
+    // 生成GPUImageFramebuffer
     outputFramebuffer = [[GPUImageContext sharedFramebufferCache] fetchFramebufferForSize:uploadedImageSize textureOptions:self.outputTextureOptions onlyTexture:YES];
     
+    // 绑定纹理数据
     glBindTexture(GL_TEXTURE_2D, [outputFramebuffer texture]);
     glTexImage2D(GL_TEXTURE_2D, 0, _pixelFormat, (int)uploadedImageSize.width, (int)uploadedImageSize.height, 0, (GLint)_pixelFormat, (GLenum)_pixelType, bytesToUpload);
 }
@@ -78,7 +81,7 @@
 - (void)updateDataFromBytes:(GLubyte *)bytesToUpload size:(CGSize)imageSize;
 {
     uploadedImageSize = imageSize;
-
+    // 调用数据上传方法
     [self uploadBytes:bytesToUpload];
 }
 
@@ -93,6 +96,7 @@
 
 		CGSize pixelSizeOfImage = [self outputImageSize];
     
+        // 遍历所有的targets，将outputFramebuffer交给每个target处理
 		for (id<GPUImageInput> currentTarget in targets)
 		{
 			NSInteger indexOfObject = [targets indexOfObject:currentTarget];
@@ -118,6 +122,7 @@
         
 		CGSize pixelSizeOfImage = [self outputImageSize];
         
+        // 遍历所有的targets，将outputFramebuffer交给每个target处理
 		for (id<GPUImageInput> currentTarget in targets)
 		{
 			NSInteger indexOfObject = [targets indexOfObject:currentTarget];

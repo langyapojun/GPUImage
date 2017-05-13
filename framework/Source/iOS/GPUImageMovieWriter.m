@@ -68,6 +68,13 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
 #pragma mark -
 #pragma mark Initialization and teardown
 
+/*
+ 1、初始化实例变量；
+ 2、创建OpenGL程序；
+ 3、初始化AVAssetWriter相关参数，如：视频编码方式、视频大小等。
+ 
+ 这里需要注意的是初始化的时候没有初始化音频相关参数，如果需要处理音频，需使用 - (void)setHasAudioTrack:(BOOL)newValue 进行相关设置。
+ */
 - (id)initWithMovieURL:(NSURL *)newMovieURL size:(CGSize)newSize;
 {
     return [self initWithMovieURL:newMovieURL size:newSize fileType:AVFileTypeQuickTimeMovie outputSettings:nil];
@@ -79,7 +86,7 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
     {
 		return nil;
     }
-
+    // 初始实例变量
     _shouldInvalidateAudioSampleWhenDone = NO;
     
     self.enabled = YES;
@@ -97,12 +104,13 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
     previousAudioTime = kCMTimeNegativeInfinity;
     inputRotation = kGPUImageNoRotation;
     
+    // 初始上下文对象
     _movieWriterContext = [[GPUImageContext alloc] init];
     [_movieWriterContext useSharegroup:[[[GPUImageContext sharedImageProcessingContext] context] sharegroup]];
 
     runSynchronouslyOnContextQueue(_movieWriterContext, ^{
         [_movieWriterContext useAsCurrentContext];
-        
+        // 初始化OpenGL程序
         if ([GPUImageContext supportsFastTextureUpload])
         {
             colorSwizzlingProgram = [_movieWriterContext programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kGPUImagePassthroughFragmentShaderString];
@@ -112,6 +120,7 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
             colorSwizzlingProgram = [_movieWriterContext programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kGPUImageColorSwizzlingFragmentShaderString];
         }
         
+        // 获取glsl中的相关变量
         if (!colorSwizzlingProgram.initialized)
         {
             [colorSwizzlingProgram addAttribute:@"position"];
@@ -170,7 +179,10 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
     
     self.enabled = YES;
     NSError *error = nil;
+    // 初始化AVAssetWriter，传入文件路径和文件格式
     assetWriter = [[AVAssetWriter alloc] initWithURL:movieURL fileType:fileType error:&error];
+    
+    // 处理初始化失败回调
     if (error != nil)
     {
         NSLog(@"Error: %@", error);
@@ -191,6 +203,7 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
     assetWriter.movieFragmentInterval = CMTimeMakeWithSeconds(1.0, 1000);
     
     // use default output settings if none specified
+    // 设置视频的宽高，以及编码格式
     if (outputSettings == nil) 
     {
         NSMutableDictionary *settings = [[NSMutableDictionary alloc] init];
@@ -200,6 +213,7 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
         outputSettings = settings;
     }
     // custom output settings specified
+    // 如果自己传入了相关设置，检查设置中是否有必要的参数
     else 
     {
 		__unused NSString *videoCodec = [outputSettings objectForKey:AVVideoCodecKey];
@@ -237,18 +251,21 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
     
     [outputSettings setObject:compressionProperties forKey:AVVideoCompressionPropertiesKey];
     */
-     
+    // 创建视频的AVAssetWriterInput
     assetWriterVideoInput = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo outputSettings:outputSettings];
+    // 实时的数据处理，如果不设置可能有丢帧现象
     assetWriterVideoInput.expectsMediaDataInRealTime = _encodingLiveVideo;
     
     // You need to use BGRA for the video in order to get realtime encoding. I use a color-swizzling shader to line up glReadPixels' normal RGBA output with the movie input's BGRA.
+    // 设置输入到编码器的像素格式
     NSDictionary *sourcePixelBufferAttributesDictionary = [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithInt:kCVPixelFormatType_32BGRA], kCVPixelBufferPixelFormatTypeKey,
                                                            [NSNumber numberWithInt:videoSize.width], kCVPixelBufferWidthKey,
                                                            [NSNumber numberWithInt:videoSize.height], kCVPixelBufferHeightKey,
                                                            nil];
 //    NSDictionary *sourcePixelBufferAttributesDictionary = [NSDictionary dictionaryWithObjectsAndKeys: [NSNumber numberWithInt:kCVPixelFormatType_32ARGB], kCVPixelBufferPixelFormatTypeKey,
 //                                                           nil];
-        
+    
+    // 创建AVAssetWriterInputPixelBufferAdaptor对象
     assetWriterPixelBufferInput = [AVAssetWriterInputPixelBufferAdaptor assetWriterInputPixelBufferAdaptorWithAssetWriterInput:assetWriterVideoInput sourcePixelBufferAttributes:sourcePixelBufferAttributesDictionary];
     
     [assetWriter addInput:assetWriterVideoInput];
@@ -363,6 +380,7 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
     });
 }
 
+// 处理音频数据
 - (void)processAudioBuffer:(CMSampleBufferRef)audioBuffer;
 {
     if (!isRecording || _paused)
@@ -370,6 +388,7 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
         return;
     }
     
+    // 有音频数据才处理
 //    if (_hasAudioTrack && CMTIME_IS_VALID(startTime))
     if (_hasAudioTrack)
     {
@@ -380,15 +399,18 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
         if (CMTIME_IS_INVALID(startTime))
         {
             runSynchronouslyOnContextQueue(_movieWriterContext, ^{
+                // 判断assetWriter的状态，不是写入状态则开始写
                 if ((audioInputReadyCallback == NULL) && (assetWriter.status != AVAssetWriterStatusWriting))
                 {
                     [assetWriter startWriting];
                 }
+                // 设置pts
                 [assetWriter startSessionAtSourceTime:currentSampleTime];
                 startTime = currentSampleTime;
             });
         }
 
+        // 判断需不需要再使用audioBuffer，如果不需要使用则设置为invalidate状态
         if (!assetWriterAudioInput.readyForMoreMediaData && _encodingLiveVideo)
         {
             NSLog(@"1: Had to drop an audio frame: %@", CFBridgingRelease(CMTimeCopyDescription(kCFAllocatorDefault, currentSampleTime)));
@@ -431,6 +453,7 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
         previousAudioTime = currentSampleTime;
         
         //if the consumer wants to do something with the audio samples before writing, let him.
+        // 如果处理音频需要回调，则回调
         if (self.audioProcessingCallback) {
             //need to introspect into the opaque CMBlockBuffer structure to find its raw sample buffers.
             CMBlockBufferRef buffer = CMSampleBufferGetDataBuffer(audioBuffer);
@@ -454,7 +477,9 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
         }
         
 //        NSLog(@"Recorded audio sample time: %lld, %d, %lld", currentSampleTime.value, currentSampleTime.timescale, currentSampleTime.epoch);
+        // 写入音频block
         void(^write)() = ^() {
+            // 如不能append 则等待
             while( ! assetWriterAudioInput.readyForMoreMediaData && ! _encodingLiveVideo && ! audioEncodingIsFinished ) {
                 NSDate *maxDate = [NSDate dateWithTimeIntervalSinceNow:0.5];
                 //NSLog(@"audio waiting...");
@@ -464,6 +489,7 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
             {
                 NSLog(@"2: Had to drop an audio frame %@", CFBridgingRelease(CMTimeCopyDescription(kCFAllocatorDefault, currentSampleTime)));
             }
+            // 当readyForMoreMediaData为YES的时候才可以追加数据
             else if(assetWriter.status == AVAssetWriterStatusWriting)
             {
                 if (![assetWriterAudioInput appendSampleBuffer:audioBuffer])
@@ -474,6 +500,7 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
                 //NSLog(@"Wrote an audio frame %@", CFBridgingRelease(CMTimeCopyDescription(kCFAllocatorDefault, currentSampleTime)));
             }
 
+            // 标记不被使用
             if (_shouldInvalidateAudioSampleWhenDone)
             {
                 CMSampleBufferInvalidate(audioBuffer);
@@ -481,6 +508,7 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
             CFRelease(audioBuffer);
         };
 //        runAsynchronouslyOnContextQueue(_movieWriterContext, write);
+        // 如果需要编码视频，则派发到相同队列中执行,否则，直接写入
         if( _encodingLiveVideo )
 
         {
@@ -891,6 +919,7 @@ NSString *const kGPUImageColorSwizzlingFragmentShaderString = SHADER_STRING
 	[self setHasAudioTrack:newValue audioSettings:nil];
 }
 
+// 初始话音频参数，如编码格式、声道数、采样率、码率
 - (void)setHasAudioTrack:(BOOL)newValue audioSettings:(NSDictionary *)audioOutputSettings;
 {
     _hasAudioTrack = newValue;

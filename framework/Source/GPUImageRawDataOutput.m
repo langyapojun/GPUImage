@@ -33,7 +33,7 @@
 
 #pragma mark -
 #pragma mark Initialization and teardown
-
+// 初始化的时候需要指定纹理大小以及是否以BGRA形式的数据输入。如果是以BGRA的形式输入，则在选择片段着色器的时候会选择kGPUImageColorSwizzlingFragmentShaderString着色器来进行从BGRA-到RGBA的转换
 - (id)initWithImageSize:(CGSize)newImageSize resultsInBGRAFormat:(BOOL)resultsInBGRAFormat;
 {
     if (!(self = [super init]))
@@ -50,10 +50,12 @@
     inputRotation = kGPUImageNoRotation;
 
     [GPUImageContext useImageProcessingContext];
+    // 如果使用了BGRA ，则选择kGPUImageColorSwizzlingFragmentShaderString着色器
     if ( (outputBGRA && ![GPUImageContext supportsFastTextureUpload]) || (!outputBGRA && [GPUImageContext supportsFastTextureUpload]) )
     {
         dataProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kGPUImageColorSwizzlingFragmentShaderString];
     }
+    // 否则选用kGPUImagePassthroughFragmentShaderString着色器
     else
     {
         dataProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:kGPUImageVertexShaderString fragmentShaderString:kGPUImagePassthroughFragmentShaderString];
@@ -77,6 +79,7 @@
         }
     }
     
+    // 获取统一变量和属性
     dataPositionAttribute = [dataProgram attributeIndex:@"position"];
     dataTextureCoordinateAttribute = [dataProgram attributeIndex:@"inputTextureCoordinate"];
     dataInputTextureUniform = [dataProgram uniformIndex:@"inputImageTexture"];
@@ -142,8 +145,10 @@
     [firstInputFramebuffer unlock];
 }
 
+// 获取特定位置的像素向量
 - (GPUByteColorVector)colorAtLocation:(CGPoint)locationInImage;
 {
+    // 将数据转为GPUByteColorVector类型
     GPUByteColorVector *imageColorBytes = (GPUByteColorVector *)self.rawBytesForImage;
 //    NSLog(@"Row start");
 //    for (unsigned int currentXPosition = 0; currentXPosition < (imageSize.width * 2.0); currentXPosition++)
@@ -158,10 +163,12 @@
 //    GPUByteColorVector byteAtHeight = imageColorBytes[(int)(imageSize.height - 1) * (int)imageSize.width];
 //    NSLog(@"Byte 1: %d, %d, %d, byte 2: %d, %d, %d, byte 3: %d, %d, %d", byteAtOne.red, byteAtOne.green, byteAtOne.blue, byteAtWidth.red, byteAtWidth.green, byteAtWidth.blue, byteAtHeight.red, byteAtHeight.green, byteAtHeight.blue);
     
+    // 控制边界，0 < x < width, 0 < y < height,
     CGPoint locationToPickFrom = CGPointZero;
     locationToPickFrom.x = MIN(MAX(locationInImage.x, 0.0), (imageSize.width - 1.0));
     locationToPickFrom.y = MIN(MAX((imageSize.height - locationInImage.y), 0.0), (imageSize.height - 1.0));
     
+    // 如果是BGRA输出，则把RGBA数据转为BGRA数据
     if (outputBGRA)    
     {
         GPUByteColorVector flippedColor = imageColorBytes[(int)(round((locationToPickFrom.y * imageSize.width) + locationToPickFrom.x))];
@@ -174,6 +181,7 @@
     }
     else
     {
+        // 返回某个位置的像素向量
         return imageColorBytes[(int)(round((locationToPickFrom.y * imageSize.width) + locationToPickFrom.x))];
     }
 }
@@ -237,11 +245,12 @@
 
 #pragma mark -
 #pragma mark Accessors
-
+// 获取RGBA数据
 - (GLubyte *)rawBytesForImage;
 {
     if ( (_rawBytesForImage == NULL) && (![GPUImageContext supportsFastTextureUpload]) )
     {
+        // 申请空间，储存读取的数据
         _rawBytesForImage = (GLubyte *) calloc(imageSize.width * imageSize.height * 4, sizeof(GLubyte));
         hasReadFromTheCurrentFrame = NO;
     }
@@ -254,17 +263,20 @@
     {
         runSynchronouslyOnVideoProcessingQueue(^{
             // Note: the fast texture caches speed up 640x480 frame reads from 9.6 ms to 3.1 ms on iPhone 4S
-            
+            // 设置GL下文对象
             [GPUImageContext useImageProcessingContext];
+            // 渲染到帧缓存
             [self renderAtInternalSize];
             
             if ([GPUImageContext supportsFastTextureUpload])
             {
+                // 等待绘制结束
                 glFinish();
                 _rawBytesForImage = [outputFramebuffer byteBuffer];
             }
             else
             {
+                // 以RGBA的形式读取数据
                 glReadPixels(0, 0, imageSize.width, imageSize.height, GL_RGBA, GL_UNSIGNED_BYTE, _rawBytesForImage);
                 // GL_EXT_read_format_bgra
                 //            glReadPixels(0, 0, imageSize.width, imageSize.height, GL_BGRA_EXT, GL_UNSIGNED_BYTE, _rawBytesForImage);

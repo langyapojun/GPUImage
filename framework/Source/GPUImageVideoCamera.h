@@ -12,6 +12,30 @@ void setColorConversion709( GLfloat conversionMatrix[9] );
 
 
 //Delegate Protocal for Face Detection.
+// kCVPixelFormatType_32BGRA
+// kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange
+// kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
+
+/*
+ yuv格式是一种图片储存格式，跟RGB格式类似。yuv中，y表示亮度，单独只有y数据就可以形成一张图片，只不过这张图片是灰色的。u和v表示色差(u和v也被称为：Cb－蓝色差，Cr－红色差)。最早的电视信号，为了兼容黑白电视，采用的就是yuv格式。一张yuv的图像，去掉uv，只保留y，这张图片就是黑白的。yuv可以通过抛弃色差来进行带宽优化。比如yuv420格式图像相比RGB来说，要节省一半的字节大小，抛弃相邻的色差对于人眼来说，差别不大。
+ 
+ yuv图像占用字节数为 ：
+ size = width * height + (width * height) / 4 + (width * height) / 4
+ RGB格式的图像占用字节数为:
+ size = width * height * 3
+ RGBA格式的图像占用字节数为:
+ size = width * height * 4
+ yuv420也包含不同的数据排列格式：I420，NV12，NV21.
+ I420格式：y,u,v 3个部分分别存储：Y0,Y1…Yn,U0,U1…Un/2,V0,V1…Vn/2
+ NV12格式：y和uv 2个部分分别存储：Y0,Y1…Yn,U0,V0,U1,V1…Un/2,Vn/2
+ NV21格式：同NV12，只是U和V的顺序相反。
+ 
+ iOS相机输出图片格式，下图为设备支持的格式：
+ 设备支持格式
+ kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange = '420v'，表示输出的视频格式为NV12；范围： (luma=[16,235] chroma=[16,240])
+ kCVPixelFormatType_420YpCbCr8BiPlanarFullRange = '420f'，表示输出的视频格式为NV12；范围： (luma=[0,255] chroma=[1,255])
+ kCVPixelFormatType_32BGRA = 'BGRA', 输出的是BGRA的格式
+ */
 @protocol GPUImageVideoCameraDelegate <NSObject>
 
 @optional
@@ -63,15 +87,19 @@ void setColorConversion709( GLfloat conversionMatrix[9] );
 @property (readonly, getter = isBackFacingCameraPresent) BOOL backFacingCameraPresent;
 
 /// This enables the benchmarking mode, which logs out instantaneous and average frame times to the console
+// 实时日志输出
 @property(readwrite, nonatomic) BOOL runBenchmark;
 
 /// Use this property to manage camera settings. Focus point, exposure point, etc.
+// 正在使用的相机对象，方便设置参数
 @property(readonly) AVCaptureDevice *inputCamera;
 
 /// This determines the rotation applied to the output image, based on the source material
+// 输出图片的方向
 @property(readwrite, nonatomic) UIInterfaceOrientation outputImageOrientation;
 
 /// These properties determine whether or not the two camera orientations should be mirrored. By default, both are NO.
+// 前置相机水平镜像
 @property(readwrite, nonatomic) BOOL horizontallyMirrorFrontFacingCamera, horizontallyMirrorRearFacingCamera;
 
 @property(nonatomic, assign) id<GPUImageVideoCameraDelegate> delegate;
@@ -91,6 +119,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] );
     can use this method to add the audio inputs and outputs early, if you're going to set the audioEncodingTarget 
     later. Returns YES is the audio inputs and outputs were added, or NO if they had already been added.
  */
+// 添加、移除音频输入输出
 - (BOOL)addAudioInputsAndOutputs;
 
 /** Remove the audio capture inputs and outputs from this session. Returns YES if the audio inputs and outputs
@@ -100,10 +129,11 @@ void setColorConversion709( GLfloat conversionMatrix[9] );
 
 /** Tear down the capture session
  */
+// 移除所有输入输出
 - (void)removeInputsAndOutputs;
 
 /// @name Manage the camera video stream
-
+// 开始、关闭、暂停、恢复相机捕获
 /** Start camera capturing
  */
 - (void)startCameraCapture;
@@ -120,6 +150,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] );
  */
 - (void)resumeCameraCapture;
 
+// 处理音视频
 /** Process a video sample
  @param sampleBuffer Buffer to process
  */
@@ -130,6 +161,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] );
  */
 - (void)processAudioSampleBuffer:(CMSampleBufferRef)sampleBuffer;
 
+// 获取相机相关参数
 /** Get the position (front, rear) of the source camera
  */
 - (AVCaptureDevicePosition)cameraPosition;
@@ -138,16 +170,19 @@ void setColorConversion709( GLfloat conversionMatrix[9] );
  */
 - (AVCaptureConnection *)videoCaptureConnection;
 
+// 变换相机
 /** This flips between the front and rear cameras
  */
 - (void)rotateCamera;
 
 /// @name Benchmarking
 
+// 获取平均帧率
 /** When benchmarking is enabled, this will keep a running average of the time from uploading, processing, and final recording or display
  */
 - (CGFloat)averageFrameDurationDuringCapture;
 
+// 重置相关基准
 - (void)resetBenchmarkAverage;
 
 + (BOOL)isBackFacingCameraPresent;

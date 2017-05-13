@@ -172,7 +172,7 @@ void reportAvailableMemoryForGPUImage(NSString *tag)
 
 #pragma mark -
 #pragma mark Managing targets
-
+// 帧缓冲对象管理。包含了设置输入的帧缓冲对象，获取输出的帧缓冲对象，以及移除输的帧缓冲对象。
 - (void)setInputFramebufferForTarget:(id<GPUImageInput>)target atIndex:(NSInteger)inputTextureIndex;
 {
     [target setInputFramebuffer:[self framebufferForOutput] atIndex:inputTextureIndex];
@@ -188,6 +188,7 @@ void reportAvailableMemoryForGPUImage(NSString *tag)
     outputFramebuffer = nil;
 }
 
+// 响应链管理。包含了增加Target，删除Target，处理完成后通知各个Target处理。
 - (void)notifyTargetsAboutNewOutputTexture;
 {
     for (id<GPUImageInput> currentTarget in targets)
@@ -292,7 +293,7 @@ void reportAvailableMemoryForGPUImage(NSString *tag)
 
 #pragma mark -
 #pragma mark Still image processing
-
+// 提取图像，包含了提取得到的CGImage和UIImage
 - (void)useNextFrameForImageCapture;
 {
 

@@ -32,11 +32,15 @@ typedef void (*GLLogFunction) (GLuint program, GLsizei bufsize, GLsizei* length,
     if ((self = [super init])) 
     {
         _initialized = NO;
-        
+
+        // 初始化属性数组
         attributes = [[NSMutableArray alloc] init];
+        // 初始化uniform属性数组
         uniforms = [[NSMutableArray alloc] init];
+        // 创建着色器程序
         program = glCreateProgram();
         
+        // 创建和编译顶点着色器
         if (![self compileShader:&vertShader 
                             type:GL_VERTEX_SHADER 
                           string:vShaderString])
@@ -44,6 +48,7 @@ typedef void (*GLLogFunction) (GLuint program, GLsizei bufsize, GLsizei* length,
             NSLog(@"Failed to compile vertex shader");
         }
         
+        // 创建和编译片源着色器
         // Create and compile fragment shader
         if (![self compileShader:&fragShader 
                             type:GL_FRAGMENT_SHADER 
@@ -52,6 +57,7 @@ typedef void (*GLLogFunction) (GLuint program, GLsizei bufsize, GLsizei* length,
             NSLog(@"Failed to compile fragment shader");
         }
         
+        // 将顶点片源着色器附着到着色器程序
         glAttachShader(program, vertShader);
         glAttachShader(program, fragShader);
     }
@@ -143,8 +149,10 @@ typedef void (*GLLogFunction) (GLuint program, GLsizei bufsize, GLsizei* length,
 // START:addattribute
 - (void)addAttribute:(NSString *)attributeName
 {
+    // 先判断当前的属性是否已存在
     if (![attributes containsObject:attributeName])
     {
+        // 如果不存在吸纳加入属性数组，然后绑定改属性的位置为在属性数组中的位置
         [attributes addObject:attributeName];
         glBindAttribLocation(program, 
                              (GLuint)[attributes indexOfObject:attributeName],
@@ -155,10 +163,12 @@ typedef void (*GLLogFunction) (GLuint program, GLsizei bufsize, GLsizei* length,
 // START:indexmethods
 - (GLuint)attributeIndex:(NSString *)attributeName
 {
+    // 获取着色器属性变量的位置，即在数组的位置（根据之前的绑定关系）
     return (GLuint)[attributes indexOfObject:attributeName];
 }
 - (GLuint)uniformIndex:(NSString *)uniformName
 {
+    // 获取uniform变量的位置
     return glGetUniformLocation(program, [uniformName UTF8String]);
 }
 // END:indexmethods
@@ -170,12 +180,16 @@ typedef void (*GLLogFunction) (GLuint program, GLsizei bufsize, GLsizei* length,
 
     GLint status;
     
+    // 链接着色器程序
     glLinkProgram(program);
     
+    // 获取链接状态
     glGetProgramiv(program, GL_LINK_STATUS, &status);
+    // 链接失败则返回
     if (status == GL_FALSE)
         return NO;
     
+    // 链接成功，就可以删掉相关的shader，释放资源
     if (vertShader)
     {
         glDeleteShader(vertShader);
@@ -187,6 +201,7 @@ typedef void (*GLLogFunction) (GLuint program, GLsizei bufsize, GLsizei* length,
         fragShader = 0;
     }
     
+    // 设置初始化成功标识
     self.initialized = YES;
 
 //    CFAbsoluteTime linkTime = (CFAbsoluteTimeGetCurrent() - startTime);
@@ -198,6 +213,7 @@ typedef void (*GLLogFunction) (GLuint program, GLsizei bufsize, GLsizei* length,
 // START:use
 - (void)use
 {
+    // 使用着色器程序
     glUseProgram(program);
 }
 // END:use
@@ -219,6 +235,7 @@ typedef void (*GLLogFunction) (GLuint program, GLsizei bufsize, GLsizei* length,
 }
 
 #pragma mark -
+// 释放资源。在析构的时候，将着色器等相关资源清理。
 // START:dealloc
 - (void)dealloc
 {

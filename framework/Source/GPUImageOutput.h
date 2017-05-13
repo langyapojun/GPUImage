@@ -27,6 +27,9 @@ void reportAvailableMemoryForGPUImage(NSString *tag);
 
 @class GPUImageMovieWriter;
 
+// GPUImageOutput 表示该类能够作为输出，输出的是 GPUImageFramebuffer 对象。该类的实现比较简单，主要是实现了一些最基本的方法，这些方法不需要依赖具体细节，细节处理在子类中完成。继承 GPUImageOutput 的类也比较多，比如：GPUImageFilter、GPUImageVideoCamera、GPUImageStillCamera、GPUImagePicture 等
+// GPUImageInput 、GPUImageOutput 是构成GPUImage响应链的基础。如果一个类实现了 GPUImageInput 协议我们可以知道它能够接收帧缓存对象的输入，如果继承了 GPUImageOutput 类，我们可以知道它能够输出帧缓存对象。如果两个都具备，则表明既能处理输入又可以输出，比如 GPUImageFilter ，而这就是响应链的基本要求。
+
 /** GPUImage's base source object
  
  Images or frames of video are uploaded from source objects, which are subclasses of GPUImageOutput. These include:
@@ -40,34 +43,48 @@ void reportAvailableMemoryForGPUImage(NSString *tag);
  */
 @interface GPUImageOutput : NSObject
 {
+    // 输出的帧缓存对象
     GPUImageFramebuffer *outputFramebuffer;
-    
+    // target列表，target纹理索引列表
     NSMutableArray *targets, *targetTextureIndices;
     
+    //纹理尺寸
     CGSize inputTextureSize, cachedMaximumOutputSize, forcedMaximumSize;
     
     BOOL overrideInputSize;
     
     BOOL allTargetsWantMonochromeData;
+    // 设置下一帧提取图片
     BOOL usingNextFrameForImageCapture;
 }
 
+// 是否使用mipmaps
 @property(readwrite, nonatomic) BOOL shouldSmoothlyScaleOutput;
+// 是否忽略处理当前target
 @property(readwrite, nonatomic) BOOL shouldIgnoreUpdatesToThisTarget;
 @property(readwrite, nonatomic, retain) GPUImageMovieWriter *audioEncodingTarget;
+// 当前忽略处理的target
 @property(readwrite, nonatomic, unsafe_unretained) id<GPUImageInput> targetToIgnoreForUpdates;
+// 每帧处理完回调
 @property(nonatomic, copy) void(^frameProcessingCompletionBlock)(GPUImageOutput*, CMTime);
+// 是否启用渲染目标
 @property(nonatomic) BOOL enabled;
+// 纹理选项
 @property(readwrite, nonatomic) GPUTextureOptions outputTextureOptions;
 
 /// @name Managing targets
+// 设置输入的帧缓冲对象以及纹理索引
 - (void)setInputFramebufferForTarget:(id<GPUImageInput>)target atIndex:(NSInteger)inputTextureIndex;
+// 输出的帧缓冲对象
 - (GPUImageFramebuffer *)framebufferForOutput;
+// 删除帧缓冲对象
 - (void)removeOutputFramebuffer;
+// 通知所有的target
 - (void)notifyTargetsAboutNewOutputTexture;
 
 /** Returns an array of the current targets.
  */
+// 所有的target列表
 - (NSArray*)targets;
 
 /** Adds a target to receive notifications when new frames are available.
@@ -99,18 +116,21 @@ void reportAvailableMemoryForGPUImage(NSString *tag);
 - (void)removeAllTargets;
 
 /// @name Manage the output texture
-
+// 强制按照传入的尺寸处理
 - (void)forceProcessingAtSize:(CGSize)frameSize;
 - (void)forceProcessingAtSizeRespectingAspectRatio:(CGSize)frameSize;
 
 /// @name Still image processing
-
+// 从帧缓冲对象提取CGImage图像
 - (void)useNextFrameForImageCapture;
 - (CGImageRef)newCGImageFromCurrentlyProcessedOutput;
+// 使用静态图片做滤镜纹理
 - (CGImageRef)newCGImageByFilteringCGImage:(CGImageRef)imageToFilter;
 
 // Platform-specific image output methods
 // If you're trying to use these methods, remember that you need to set -useNextFrameForImageCapture before running -processImage or running video and calling any of these methods, or you will get a nil image
+// 从帧缓冲对象提取UIImage图像
+// 使用静态图片做滤镜纹理
 #if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE
 - (UIImage *)imageFromCurrentFramebuffer;
 - (UIImage *)imageFromCurrentFramebufferWithOrientation:(UIImageOrientation)imageOrientation;
@@ -123,6 +143,7 @@ void reportAvailableMemoryForGPUImage(NSString *tag);
 - (CGImageRef)newCGImageByFilteringImage:(NSImage *)imageToFilter;
 #endif
 
+// 是否提供单色输出
 - (BOOL)providesMonochromeOutput;
 
 @end

@@ -3,6 +3,9 @@
 //  http://iphonedevelopment.blogspot.com/2010/11/opengl-es-20-for-ios-chapter-4.html
 //  I've extended this to be able to take programs as NSStrings in addition to files, for baked-in shaders
 
+// 在GPUImage中封装了GLProgram专门处理OpenGL ES程序的创建等相关工作。
+// GLProgram 与着色器程序创建息息相关，其中包括创建、编译、链接、使用等过程。
+
 #import <Foundation/Foundation.h>
 
 #if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE

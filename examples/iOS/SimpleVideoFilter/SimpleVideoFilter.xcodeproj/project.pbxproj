@@ -208,7 +208,8 @@
 				ORGANIZATIONNAME = "Cell Phone";
 				TargetAttributes = {
 					BCB5DDC914E86899000AF3C2 = {
-						DevelopmentTeam = V2DTUY5PQ8;
+						DevelopmentTeam = CFP9KY4MGC;
+						ProvisioningStyle = Manual;
 					};
 				};
 			};
@@ -381,11 +382,14 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = CFP9KY4MGC;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "SimpleVideoFilter/SimpleVideoFilter-Prefix.pch";
 				INFOPLIST_FILE = "SimpleVideoFilter/SimpleVideoFilter-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "64961819-84f5-4423-8a6e-b5728bc851b1";
+				PROVISIONING_PROFILE_SPECIFIER = Wildcard;
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -394,11 +398,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = "";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "SimpleVideoFilter/SimpleVideoFilter-Prefix.pch";
 				INFOPLIST_FILE = "SimpleVideoFilter/SimpleVideoFilter-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;

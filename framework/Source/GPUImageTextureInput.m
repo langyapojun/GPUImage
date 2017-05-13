@@ -19,6 +19,7 @@
     textureSize = newTextureSize;
 
     runSynchronouslyOnVideoProcessingQueue(^{
+        // 生成帧缓存对象
         outputFramebuffer = [[GPUImageFramebuffer alloc] initWithSize:newTextureSize overriddenTexture:newInputTexture];
     });
     
@@ -31,6 +32,7 @@
 - (void)processTextureWithFrameTime:(CMTime)frameTime;
 {
     runAsynchronouslyOnVideoProcessingQueue(^{
+        // 遍历所有targets，驱动各个target处理数据
         for (id<GPUImageInput> currentTarget in targets)
         {
             NSInteger indexOfObject = [targets indexOfObject:currentTarget];

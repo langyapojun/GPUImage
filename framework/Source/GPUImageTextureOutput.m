@@ -21,6 +21,7 @@
     return self;
 }
 
+// 纹理使用完，解锁纹理对象
 - (void)doneWithTexture;
 {
     [firstInputFramebuffer unlock];

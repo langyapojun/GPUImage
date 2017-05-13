@@ -34,8 +34,9 @@ typedef NS_ENUM(NSUInteger, GPUImageFillModeType) {
  @param blueComponent Blue component for background color
  @param alphaComponent Alpha component for background color
  */
+// 设置背景颜色
 - (void)setBackgroundColorRed:(GLfloat)redComponent green:(GLfloat)greenComponent blue:(GLfloat)blueComponent alpha:(GLfloat)alphaComponent;
-
+// 该方法未实现
 - (void)setCurrentlyReceivingMonochromeInput:(BOOL)newValue;
 
 @end

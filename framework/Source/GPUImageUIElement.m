@@ -16,7 +16,7 @@
 
 #pragma mark -
 #pragma mark Initialization and teardown
-
+//通过UIView或CALayer进行初始化，初始化的过程中调用 [layer renderInContext:imageContext] 进行渲染，渲染后便生成纹理对象。
 - (id)initWithView:(UIView *)inputView;
 {
     if (!(self = [super init]))

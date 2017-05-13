@@ -76,12 +76,12 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     {
 		return nil;
     }
-    
+    // 创建音视频处理队列
     cameraProcessingQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH,0);
 	audioProcessingQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW,0);
-
+    // 创建信号量
     frameRenderingSemaphore = dispatch_semaphore_create(1);
-
+    // 变量的初始化
 	_frameRate = 0; // This will not set frame rate unless this value gets set to 1 or above
     _runBenchmark = NO;
     capturePaused = NO;
@@ -91,6 +91,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     _preferredConversion = kColorConversion709;
     
 	// Grab the back-facing or front-facing camera
+    // 根据传入参数获取前后相机
     _inputCamera = nil;
 	NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
 	for (AVCaptureDevice *device in devices) 
@@ -100,17 +101,18 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 			_inputCamera = device;
 		}
 	}
-    
+    // 获取相机失败，立即返回
     if (!_inputCamera) {
         return nil;
     }
-    
+    // 创建会话对象
 	// Create the capture session
 	_captureSession = [[AVCaptureSession alloc] init];
-	
+	// 开始配置
     [_captureSession beginConfiguration];
     
-	// Add the video input	
+	// Add the video input
+    // 创建video输入对象
 	NSError *error = nil;
 	videoInput = [[AVCaptureDeviceInput alloc] initWithDevice:_inputCamera error:&error];
 	if ([_captureSession canAddInput:videoInput]) 
@@ -118,11 +120,13 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 		[_captureSession addInput:videoInput];
 	}
 	
-	// Add the video frame output	
+	// Add the video frame output
+    // 创建video输出对象
 	videoOutput = [[AVCaptureVideoDataOutput alloc] init];
 	[videoOutput setAlwaysDiscardsLateVideoFrames:NO];
     
 //    if (captureAsYUV && [GPUImageContext deviceSupportsRedTextures])
+    // 设置YUV的处理方式
     if (captureAsYUV && [GPUImageContext supportsFastTextureUpload])
     {
         BOOL supportsFullYUVRange = NO;
@@ -137,20 +141,24 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
         
         if (supportsFullYUVRange)
         {
+            // 设置kCVPixelFormatType_420YpCbCr8BiPlanarFullRange格式
             [videoOutput setVideoSettings:[NSDictionary dictionaryWithObject:[NSNumber numberWithInt:kCVPixelFormatType_420YpCbCr8BiPlanarFullRange] forKey:(id)kCVPixelBufferPixelFormatTypeKey]];
             isFullYUVRange = YES;
         }
         else
         {
+            // 设置kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange格式
             [videoOutput setVideoSettings:[NSDictionary dictionaryWithObject:[NSNumber numberWithInt:kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange] forKey:(id)kCVPixelBufferPixelFormatTypeKey]];
             isFullYUVRange = NO;
         }
     }
     else
     {
+        // 设置kCVPixelFormatType_32BGRA格式
         [videoOutput setVideoSettings:[NSDictionary dictionaryWithObject:[NSNumber numberWithInt:kCVPixelFormatType_32BGRA] forKey:(id)kCVPixelBufferPixelFormatTypeKey]];
     }
     
+    // 创建GL程序、获取属性位置
     runSynchronouslyOnVideoProcessingQueue(^{
         
         if (captureAsYUV)
@@ -203,8 +211,9 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
             glEnableVertexAttribArray(yuvConversionTextureCoordinateAttribute);
         }
     });
-    
+    // 设置AVCaptureVideoDataOutputSampleBufferDelegate代理
     [videoOutput setSampleBufferDelegate:self queue:cameraProcessingQueue];
+    // 添加输出
 	if ([_captureSession canAddOutput:videoOutput])
 	{
 		[_captureSession addOutput:videoOutput];
@@ -214,7 +223,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 		NSLog(@"Couldn't add video output");
         return nil;
 	}
-    
+    // 设置视频质量
 	_captureSessionPreset = sessionPreset;
     [_captureSession setSessionPreset:_captureSessionPreset];
 
@@ -225,7 +234,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 //        conn.videoMinFrameDuration = CMTimeMake(1,60);
 //    if (conn.supportsVideoMaxFrameDuration)
 //        conn.videoMaxFrameDuration = CMTimeMake(1,60);
-    
+    // 提交配置
     [_captureSession commitConfiguration];
     
 	return self;
@@ -253,6 +262,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 #endif
 }
 
+// 增加音频输入输出
 - (BOOL)addAudioInputsAndOutputs
 {
     if (audioOutput)
@@ -282,6 +292,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     return YES;
 }
 
+// 移除音频输入输出
 - (BOOL)removeAudioInputsAndOutputs
 {
     if (!audioOutput)
@@ -297,6 +308,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     return YES;
 }
 
+// 移除所有输入输出
 - (void)removeInputsAndOutputs;
 {
     [_captureSession beginConfiguration];
@@ -335,6 +347,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     return [_captureSession isRunning];
 }
 
+// 开始捕获
 - (void)startCameraCapture;
 {
     if (![_captureSession isRunning])
@@ -344,6 +357,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 	};
 }
 
+// 停止捕获
 - (void)stopCameraCapture;
 {
     if ([_captureSession isRunning])
@@ -606,6 +620,19 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     }
 }
 
+// 处理视频
+/*
+ 纹理格式与颜色映射
+ 基本格式             纹素数据描述
+ GL_RED             (R, 0.0, 0.0, 1.0)
+ GL_RG              (R, G, 0.0, 1.0)
+ GL_RGB             (R, G, B, 1.0)
+ GL_RGBA	        (R, G, B, A)
+ GL_LUMINANCE	    (L, L, L, 1.0)
+ GL_LUMINANCE_ALPHA	(L, L, L, A)
+ GL_ALPH            (0.0, 0.0, 0.0, A)
+ 通过上表，我们就知道为什么在GPUImage中，Y分量用GL_LUMINANCE内部各式，和UV分量用GL_LUMINANCE_ALPHA内部各式。
+ */
 - (void)processVideoSampleBuffer:(CMSampleBufferRef)sampleBuffer;
 {
     if (capturePaused)
@@ -615,6 +642,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     
     CFAbsoluteTime startTime = CFAbsoluteTimeGetCurrent();
     CVImageBufferRef cameraFrame = CMSampleBufferGetImageBuffer(sampleBuffer);
+    // 获取视频宽高
     int bufferWidth = (int) CVPixelBufferGetWidth(cameraFrame);
     int bufferHeight = (int) CVPixelBufferGetHeight(cameraFrame);
     CFTypeRef colorAttachments = CVBufferGetAttachment(cameraFrame, kCVImageBufferYCbCrMatrixKey, NULL);
@@ -652,6 +680,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 
     [GPUImageContext useImageProcessingContext];
 
+    // 快速YUV纹理生成
     if ([GPUImageContext supportsFastTextureUpload] && captureAsYUV)
     {
         CVOpenGLESTextureRef luminanceTextureRef = NULL;
@@ -670,6 +699,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
             
             CVReturn err;
             // Y-plane
+            // Y分量
             glActiveTexture(GL_TEXTURE4);
             if ([GPUImageContext deviceSupportsRedTextures])
             {
@@ -691,6 +721,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
             glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
             
             // UV-plane
+            // UV分量（Width/2 = Width/4 + Width/4）
             glActiveTexture(GL_TEXTURE5);
             if ([GPUImageContext deviceSupportsRedTextures])
             {
@@ -760,7 +791,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 //            outputTexture = 0;
         }
         
-        
+        // 帧率
         if (_runBenchmark)
         {
             numberOfFramesCaptured++;
@@ -775,24 +806,30 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     }
     else
     {
+        // 锁定基地址
         CVPixelBufferLockBaseAddress(cameraFrame, 0);
         
+        // 获取每行的字节宽度（width * 4）
         int bytesPerRow = (int) CVPixelBufferGetBytesPerRow(cameraFrame);
+        // 获取帧缓存
         outputFramebuffer = [[GPUImageContext sharedFramebufferCache] fetchFramebufferForSize:CGSizeMake(bytesPerRow / 4, bufferHeight) onlyTexture:YES];
         [outputFramebuffer activateFramebuffer];
 
+        // 激活纹理
         glBindTexture(GL_TEXTURE_2D, [outputFramebuffer texture]);
         
         //        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bufferWidth, bufferHeight, 0, GL_BGRA, GL_UNSIGNED_BYTE, CVPixelBufferGetBaseAddress(cameraFrame));
         
         // Using BGRA extension to pull in video frame data directly
         // The use of bytesPerRow / 4 accounts for a display glitch present in preview video frames when using the photo preset on the camera
+        // BGRA转RGBA
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, bytesPerRow / 4, bufferHeight, 0, GL_BGRA, GL_UNSIGNED_BYTE, CVPixelBufferGetBaseAddress(cameraFrame));
         
         [self updateTargetsForVideoCameraUsingCacheTextureAtWidth:bytesPerRow / 4 height:bufferHeight time:currentTime];
         
         CVPixelBufferUnlockBaseAddress(cameraFrame, 0);
         
+        // 更新帧率
         if (_runBenchmark)
         {
             numberOfFramesCaptured++;
@@ -805,6 +842,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     }  
 }
 
+// 处理音频
 - (void)processAudioSampleBuffer:(CMSampleBufferRef)sampleBuffer;
 {
     [self.audioEncodingTarget processAudioBuffer:sampleBuffer]; 

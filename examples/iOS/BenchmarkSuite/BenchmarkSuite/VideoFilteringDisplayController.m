@@ -58,6 +58,7 @@
 	videoOutput = [[AVCaptureVideoDataOutput alloc] init];
 	[videoOutput setAlwaysDiscardsLateVideoFrames:YES];
 	// Use RGB frames instead of YUV to ease color processing
+    // 使用RGB帧而不是YUV缓解颜色处理
 	[videoOutput setVideoSettings:[NSDictionary dictionaryWithObject:[NSNumber numberWithInt:kCVPixelFormatType_32BGRA] forKey:(id)kCVPixelBufferPixelFormatTypeKey]];
     //	dispatch_queue_t videoQueue = dispatch_queue_create("com.sunsetlakesoftware.colortracking.videoqueue", NULL);
     //	[videoOutput setSampleBufferDelegate:self queue:videoQueue];
