@@ -113,6 +113,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] );
  @param sessionPreset Session preset to use
  @param cameraPosition Camera to capture from
  */
+- (void)printSupportedPixelFormats;
 - (id)initWithSessionPreset:(NSString *)sessionPreset cameraPosition:(AVCaptureDevicePosition)cameraPosition;
 
 /** Add audio capture to the session. Adding inputs and outputs freezes the capture session momentarily, so you

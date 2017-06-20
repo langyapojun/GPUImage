@@ -74,7 +74,7 @@ typedef NS_ENUM(NSUInteger, GPUImageRotationMode) {
 @protocol GPUImageInput <NSObject>
 // 准备下一个要使用的帧
 - (void)newFrameReadyAtTime:(CMTime)frameTime atIndex:(NSInteger)textureIndex;
-// 设置输入的真缓冲对象以及纹理索引
+// 设置输入的帧缓冲对象以及纹理索引
 - (void)setInputFramebuffer:(GPUImageFramebuffer *)newInputFramebuffer atIndex:(NSInteger)textureIndex;
 // 下一个有效的纹理索引
 - (NSInteger)nextAvailableTextureIndex;

@@ -389,10 +389,12 @@
         glClearColor(backgroundColorRed, backgroundColorGreen, backgroundColorBlue, backgroundColorAlpha);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
+        // 选择一个纹理单元。先选择纹理单元4，然后把源图像数据绑定到GL_TEXTURE_2D的位置上。最后告诉片元着色器，纹理单元是4。
         glActiveTexture(GL_TEXTURE4);
         glBindTexture(GL_TEXTURE_2D, [inputFramebufferForDisplay texture]);
         glUniform1i(displayInputTextureUniform, 4);
         
+        // 绑定顶点坐标数据和纹理坐标数据。
         glVertexAttribPointer(displayPositionAttribute, 2, GL_FLOAT, 0, 0, imageVertices);
         glVertexAttribPointer(displayTextureCoordinateAttribute, 2, GL_FLOAT, 0, 0, [GPUImageView textureCoordinatesForRotation:inputRotation]);
         
@@ -411,6 +413,7 @@
     return 0;
 }
 
+// 设定输入的源图像数据缓存，并且对缓存加锁。
 - (void)setInputFramebuffer:(GPUImageFramebuffer *)newInputFramebuffer atIndex:(NSInteger)textureIndex;
 {
     inputFramebufferForDisplay = newInputFramebuffer;

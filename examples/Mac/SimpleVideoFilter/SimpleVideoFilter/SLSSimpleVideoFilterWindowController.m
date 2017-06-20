@@ -15,6 +15,7 @@
     // Instantiate video camera
     videoCamera = [[GPUImageAVCamera alloc] initWithSessionPreset:AVCaptureSessionPreset640x480 cameraDevice:nil];
     videoCamera.runBenchmark = YES;
+    [videoCamera printSupportedPixelFormats];
     
     // Create filter and add it to target
     filter = [[GPUImageSepiaFilter alloc] init];

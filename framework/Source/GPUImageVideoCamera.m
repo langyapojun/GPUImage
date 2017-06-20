@@ -60,6 +60,62 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
 #pragma mark -
 #pragma mark Initialization and teardown
 
+- (void)printSupportedPixelFormats;
+{
+    NSArray *supportedPixelFormats = videoOutput.availableVideoCVPixelFormatTypes;
+    for (NSNumber *currentPixelFormat in supportedPixelFormats)
+    {
+        NSString *pixelFormatName = nil;
+        
+        switch([currentPixelFormat intValue])
+        {
+            case kCVPixelFormatType_1Monochrome: pixelFormatName = @"kCVPixelFormatType_1Monochrome"; break;
+            case kCVPixelFormatType_2Indexed: pixelFormatName = @"kCVPixelFormatType_2Indexed"; break;
+            case kCVPixelFormatType_4Indexed: pixelFormatName = @"kCVPixelFormatType_4Indexed"; break;
+            case kCVPixelFormatType_8Indexed: pixelFormatName = @"kCVPixelFormatType_8Indexed"; break;
+            case kCVPixelFormatType_1IndexedGray_WhiteIsZero: pixelFormatName = @"kCVPixelFormatType_1IndexedGray_WhiteIsZero"; break;
+            case kCVPixelFormatType_2IndexedGray_WhiteIsZero: pixelFormatName = @"kCVPixelFormatType_2IndexedGray_WhiteIsZero"; break;
+            case kCVPixelFormatType_4IndexedGray_WhiteIsZero: pixelFormatName = @"kCVPixelFormatType_4IndexedGray_WhiteIsZero"; break;
+            case kCVPixelFormatType_8IndexedGray_WhiteIsZero: pixelFormatName = @"kCVPixelFormatType_8IndexedGray_WhiteIsZero"; break;
+            case kCVPixelFormatType_16BE555: pixelFormatName = @"kCVPixelFormatType_16BE555"; break;
+            case kCVPixelFormatType_16LE555: pixelFormatName = @"kCVPixelFormatType_16LE555"; break;
+            case kCVPixelFormatType_16LE5551: pixelFormatName = @"kCVPixelFormatType_16LE5551"; break;
+            case kCVPixelFormatType_16BE565: pixelFormatName = @"kCVPixelFormatType_16BE565"; break;
+            case kCVPixelFormatType_16LE565: pixelFormatName = @"kCVPixelFormatType_16LE565"; break;
+            case kCVPixelFormatType_24RGB: pixelFormatName = @"kCVPixelFormatType_24RGB"; break;
+            case kCVPixelFormatType_24BGR: pixelFormatName = @"kCVPixelFormatType_24BGR"; break;
+            case kCVPixelFormatType_32ARGB: pixelFormatName = @"kCVPixelFormatType_32ARGB"; break;
+            case kCVPixelFormatType_32BGRA: pixelFormatName = @"kCVPixelFormatType_32BGRA"; break;
+            case kCVPixelFormatType_32ABGR: pixelFormatName = @"kCVPixelFormatType_32ABGR"; break;
+            case kCVPixelFormatType_32RGBA: pixelFormatName = @"kCVPixelFormatType_32RGBA"; break;
+            case kCVPixelFormatType_64ARGB: pixelFormatName = @"kCVPixelFormatType_64ARGB"; break;
+            case kCVPixelFormatType_48RGB: pixelFormatName = @"kCVPixelFormatType_48RGB"; break;
+            case kCVPixelFormatType_32AlphaGray: pixelFormatName = @"kCVPixelFormatType_32AlphaGray"; break;
+            case kCVPixelFormatType_16Gray: pixelFormatName = @"kCVPixelFormatType_16Gray"; break;
+            case kCVPixelFormatType_30RGB: pixelFormatName = @"kCVPixelFormatType_30RGB"; break;
+            case kCVPixelFormatType_422YpCbCr8: pixelFormatName = @"kCVPixelFormatType_422YpCbCr8"; break;
+            case kCVPixelFormatType_4444YpCbCrA8: pixelFormatName = @"kCVPixelFormatType_4444YpCbCrA8"; break;
+            case kCVPixelFormatType_4444YpCbCrA8R: pixelFormatName = @"kCVPixelFormatType_4444YpCbCrA8R"; break;
+            case kCVPixelFormatType_4444AYpCbCr8: pixelFormatName = @"kCVPixelFormatType_4444AYpCbCr8"; break;
+            case kCVPixelFormatType_4444AYpCbCr16: pixelFormatName = @"kCVPixelFormatType_4444AYpCbCr16"; break;
+            case kCVPixelFormatType_444YpCbCr8: pixelFormatName = @"kCVPixelFormatType_444YpCbCr8"; break;
+            case kCVPixelFormatType_422YpCbCr16: pixelFormatName = @"kCVPixelFormatType_422YpCbCr16"; break;
+            case kCVPixelFormatType_422YpCbCr10: pixelFormatName = @"kCVPixelFormatType_422YpCbCr10"; break;
+            case kCVPixelFormatType_444YpCbCr10: pixelFormatName = @"kCVPixelFormatType_444YpCbCr10"; break;
+            case kCVPixelFormatType_420YpCbCr8Planar: pixelFormatName = @"kCVPixelFormatType_420YpCbCr8Planar"; break;
+            case kCVPixelFormatType_420YpCbCr8PlanarFullRange: pixelFormatName = @"kCVPixelFormatType_420YpCbCr8PlanarFullRange"; break;
+            case kCVPixelFormatType_422YpCbCr_4A_8BiPlanar: pixelFormatName = @"kCVPixelFormatType_422YpCbCr_4A_8BiPlanar"; break;
+            case kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange: pixelFormatName = @"kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange"; break;
+            case kCVPixelFormatType_420YpCbCr8BiPlanarFullRange: pixelFormatName = @"kCVPixelFormatType_420YpCbCr8BiPlanarFullRange"; break;
+            case kCVPixelFormatType_422YpCbCr8_yuvs: pixelFormatName = @"kCVPixelFormatType_422YpCbCr8_yuvs"; break;
+            case kCVPixelFormatType_422YpCbCr8FullRange: pixelFormatName = @"kCVPixelFormatType_422YpCbCr8FullRange"; break;
+            case kCVPixelFormatType_OneComponent8: pixelFormatName = @"kCVPixelFormatType_OneComponent8"; break;
+            case kCVPixelFormatType_TwoComponent8: pixelFormatName = @"kCVPixelFormatType_TwoComponent8"; break;
+        }
+        NSLog(@"Supported pixel format: %@", pixelFormatName);
+    }
+}
+
 - (id)init;
 {
     if (!(self = [self initWithSessionPreset:AVCaptureSessionPreset640x480 cameraPosition:AVCaptureDevicePositionBack]))
@@ -87,7 +143,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     capturePaused = NO;
     outputRotation = kGPUImageNoRotation;
     internalRotation = kGPUImageNoRotation;
-    captureAsYUV = YES;
+    captureAsYUV = NO;
     _preferredConversion = kColorConversion709;
     
 	// Grab the back-facing or front-facing camera
@@ -645,6 +701,8 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
     // 获取视频宽高
     int bufferWidth = (int) CVPixelBufferGetWidth(cameraFrame);
     int bufferHeight = (int) CVPixelBufferGetHeight(cameraFrame);
+    
+    //  获取pixelBuffer的颜色空间格式，决定使用的颜色转换矩阵，用于下一步的YUV到RGB颜色空间的转换；
     CFTypeRef colorAttachments = CVBufferGetAttachment(cameraFrame, kCVImageBufferYCbCrMatrixKey, NULL);
     if (colorAttachments != NULL)
     {
@@ -687,7 +745,7 @@ void setColorConversion709( GLfloat conversionMatrix[9] )
         CVOpenGLESTextureRef chrominanceTextureRef = NULL;
 
 //        if (captureAsYUV && [GPUImageContext deviceSupportsRedTextures])
-        if (CVPixelBufferGetPlaneCount(cameraFrame) > 0) // Check for YUV planar inputs to do RGB conversion
+        if (CVPixelBufferGetPlaneCount(cameraFrame) > 0) // Check for YUV planar inputs to do RGB conversion缓冲区的平面数
         {
             CVPixelBufferLockBaseAddress(cameraFrame, 0);
             

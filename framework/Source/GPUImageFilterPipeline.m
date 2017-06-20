@@ -13,7 +13,7 @@
 @synthesize filters = _filters, input = _input, output = _output;
 
 #pragma mark Config file init
-
+// 根据filter配置字典、GPUImageOutput、GPUImageInput构建GPUImageFilterPipeline
 - (id)initWithConfiguration:(NSDictionary *)configuration input:(GPUImageOutput *)input output:(id <GPUImageInput>)output {
     self = [super init];
     if (self) {
@@ -28,10 +28,12 @@
     return self;
 }
 
+// 根据filter配置文件的URL、GPUImageOutput、GPUImageInput构建GPUImageFilterPipeline
 - (id)initWithConfigurationFile:(NSURL *)configuration input:(GPUImageOutput *)input output:(id <GPUImageInput>)output {
     return [self initWithConfiguration:[NSDictionary dictionaryWithContentsOfURL:configuration] input:input output:output];
 }
 
+// 解析配置文件
 - (BOOL)_parseConfiguration:(NSDictionary *)configuration {
     NSArray *filters = [configuration objectForKey:@"Filters"];
     if (!filters) {
@@ -39,6 +41,7 @@
     }
     
     NSError *regexError = nil;
+    // 匹配配置文件参数如：float(1.0), CGPoint(1.0, 2.0) 等类型
     NSRegularExpression *parsingRegex = [NSRegularExpression regularExpressionWithPattern:@"(float|CGPoint|NSString)\\((.*?)(?:,\\s*(.*?))*\\)"
                                                                                   options:0
                                                                                     error:&regexError];
@@ -46,11 +49,13 @@
     // It's faster to put them into an array and then pass it to the filters property than it is to call [self addFilter:] every time
     NSMutableArray *orderedFilters = [NSMutableArray arrayWithCapacity:[filters count]];
     for (NSDictionary *filter in filters) {
+        // 由FilterName生成相应的实例对象
         NSString *filterName = [filter objectForKey:@"FilterName"];
         Class theClass = NSClassFromString(filterName);
         GPUImageOutput<GPUImageInput> *genericFilter = [[theClass alloc] init];
         // Set up the properties
         NSDictionary *filterAttributes;
+        // 由FilterName生成相应的实例对象
         if ((filterAttributes = [filter objectForKey:@"Attributes"])) {
             for (NSString *propertyKey in filterAttributes) {
                 // Set up the selector
@@ -136,7 +141,7 @@
 }
 
 #pragma mark Regular init
-
+// 根据输入的filter数组、GPUImageOutput、GPUImageInput构建GPUImageFilterPipeline
 - (id)initWithOrderedFilters:(NSArray *)filters input:(GPUImageOutput *)input output:(id <GPUImageInput>)output {
     self = [super init];
     if (self) {
@@ -148,47 +153,55 @@
     return self;
 }
 
+// 在特定位置增加filter
 - (void)addFilter:(GPUImageOutput<GPUImageInput> *)filter atIndex:(NSUInteger)insertIndex {
     [self.filters insertObject:filter atIndex:insertIndex];
     [self _refreshFilters];
 }
 
+// 在末尾增加filter
 - (void)addFilter:(GPUImageOutput<GPUImageInput> *)filter {
     [self.filters addObject:filter];
     [self _refreshFilters];
 }
 
+// 替换filter
 - (void)replaceFilterAtIndex:(NSUInteger)index withFilter:(GPUImageOutput<GPUImageInput> *)filter {
     [self.filters replaceObjectAtIndex:index withObject:filter];
     [self _refreshFilters];
 }
 
+// 删除filter
 - (void) removeFilter:(GPUImageOutput<GPUImageInput> *)filter;
 {
     [self.filters removeObject:filter];
     [self _refreshFilters];
 }
 
+// 删除特定索引的filter
 - (void)removeFilterAtIndex:(NSUInteger)index {
     [self.filters removeObjectAtIndex:index];
     [self _refreshFilters];
 }
 
+// 删除所有filter
 - (void)removeAllFilters {
     [self.filters removeAllObjects];
     [self _refreshFilters];
 }
-
+// 替换所有filter
 - (void)replaceAllFilters:(NSArray *)newFilters {
     self.filters = [NSMutableArray arrayWithArray:newFilters];
     [self _refreshFilters];
 }
 
+// 更新响应链
 - (void)_refreshFilters {
-    
+    // 将input作为响应链源
     id prevFilter = self.input;
     GPUImageOutput<GPUImageInput> *theFilter = nil;
     
+    // 循环添加
     for (int i = 0; i < [self.filters count]; i++) {
         theFilter = [self.filters objectAtIndex:i];
         [prevFilter removeAllTargets];
@@ -197,20 +210,23 @@
     }
     
     [prevFilter removeAllTargets];
-    
+    // 最后将output加入响应链
     if (self.output != nil) {
         [prevFilter addTarget:self.output];
     }
 }
 
 - (UIImage *)currentFilteredFrame {
+    // 由final filter生成图像
     return [(GPUImageOutput<GPUImageInput> *)[_filters lastObject] imageFromCurrentFramebuffer];
 }
 
+// 根据imageOrientation生成图像
 - (UIImage *)currentFilteredFrameWithOrientation:(UIImageOrientation)imageOrientation {
   return [(GPUImageOutput<GPUImageInput> *)[_filters lastObject] imageFromCurrentFramebufferWithOrientation:imageOrientation];
 }
 
+// 由final filter生成图像
 - (CGImageRef)newCGImageFromCurrentFilteredFrame {
     return [(GPUImageOutput<GPUImageInput> *)[_filters lastObject] newCGImageFromCurrentlyProcessedOutput];
 }
