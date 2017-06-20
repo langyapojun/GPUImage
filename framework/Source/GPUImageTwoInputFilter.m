@@ -56,8 +56,10 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
         
     runSynchronouslyOnVideoProcessingQueue(^{
         [GPUImageContext useImageProcessingContext];
+        // 获取第二个纹理坐标对象
         filterSecondTextureCoordinateAttribute = [filterProgram attributeIndex:@"inputTextureCoordinate2"];
         
+        // 获取第二个纹理对象
         filterInputTextureUniform2 = [filterProgram uniformIndex:@"inputImageTexture2"]; // This does assume a name of "inputImageTexture2" for second input texture in the fragment shader
         glEnableVertexAttribArray(filterSecondTextureCoordinateAttribute);
     });
@@ -106,10 +108,12 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
     glClearColor(backgroundColorRed, backgroundColorGreen, backgroundColorBlue, backgroundColorAlpha);
     glClear(GL_COLOR_BUFFER_BIT);
     
+    // 激活第一个纹理
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, [firstInputFramebuffer texture]);
 	glUniform1i(filterInputTextureUniform, 2);	
     
+    // 激活第二个纹理
     glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, [secondInputFramebuffer texture]);
     glUniform1i(filterInputTextureUniform2, 3);
@@ -209,6 +213,7 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
 - (void)newFrameReadyAtTime:(CMTime)frameTime atIndex:(NSInteger)textureIndex;
 {
     // You can set up infinite update loops, so this helps to short circuit them
+    // 已经接收了两个纹理对象的输入，则返回
     if (hasReceivedFirstFrame && hasReceivedSecondFrame)
     {
         return;
@@ -216,10 +221,12 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
     
     BOOL updatedMovieFrameOppositeStillImage = NO;
     
+    // 处理第一个纹理对象
     if (textureIndex == 0)
     {
         hasReceivedFirstFrame = YES;
         firstFrameTime = frameTime;
+        // 如果不检查第二个纹理输入，则直接默认已经接收了第二个纹理
         if (secondFrameCheckDisabled)
         {
             hasReceivedSecondFrame = YES;
@@ -237,6 +244,7 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
     {
         hasReceivedSecondFrame = YES;
         secondFrameTime = frameTime;
+        // 如果不检查第一个纹理输入，则直接默认已经接收了第一个纹理
         if (firstFrameCheckDisabled)
         {
             hasReceivedFirstFrame = YES;
@@ -252,6 +260,7 @@ NSString *const kGPUImageTwoInputTextureVertexShaderString = SHADER_STRING
     }
 
     // || (hasReceivedFirstFrame && secondFrameCheckDisabled) || (hasReceivedSecondFrame && firstFrameCheckDisabled)
+    // 如果接收了两个纹理输入或者是有效帧，则渲染
     if ((hasReceivedFirstFrame && hasReceivedSecondFrame) || updatedMovieFrameOppositeStillImage)
     {
         CMTime passOnFrameTime = (!CMTIME_IS_INDEFINITE(firstFrameTime)) ? firstFrameTime : secondFrameTime;

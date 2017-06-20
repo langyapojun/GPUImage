@@ -47,21 +47,29 @@ typedef struct GPUMatrix3x3 GPUMatrix3x3;
  */
 @interface GPUImageFilter : GPUImageOutput <GPUImageInput>
 {
+    // 输入帧缓存对象
     GPUImageFramebuffer *firstInputFramebuffer;
     
+    // GL程序
     GLProgram *filterProgram;
+    // 属性变量
     GLint filterPositionAttribute, filterTextureCoordinateAttribute;
+    // 纹理统一变量
     GLint filterInputTextureUniform;
+    // GL清屏颜色
     GLfloat backgroundColorRed, backgroundColorGreen, backgroundColorBlue, backgroundColorAlpha;
-    
+    // 结束处理操作
     BOOL isEndProcessing;
 
     CGSize currentFilterSize;
+    // 屏幕旋转方向
     GPUImageRotationMode inputRotation;
     
     BOOL currentlyReceivingMonochromeInput;
     
+    // 保存RestorationBlocks的字典
     NSMutableDictionary *uniformStateRestorationBlocks;
+    // 信号量
     dispatch_semaphore_t imageCaptureSemaphore;
 }
 
@@ -93,6 +101,7 @@ typedef struct GPUMatrix3x3 GPUMatrix3x3;
  */
 - (id)initWithFragmentShaderFromFile:(NSString *)fragmentShaderFilename;
 - (void)initializeAttributes;
+// 变换方法
 - (void)setupFilterForSize:(CGSize)filterFrameSize;
 - (CGSize)rotatedSize:(CGSize)sizeToRotate forIndex:(NSInteger)textureIndex;
 - (CGPoint)rotatedPoint:(CGPoint)pointToRotate forRotation:(GPUImageRotationMode)rotation;
@@ -100,16 +109,20 @@ typedef struct GPUMatrix3x3 GPUMatrix3x3;
 /// @name Managing the display FBOs
 /** Size of the frame buffer object
  */
+// 查询方法
 - (CGSize)sizeOfFBO;
 
 /// @name Rendering
 + (const GLfloat *)textureCoordinatesForRotation:(GPUImageRotationMode)rotationMode;
+// 渲染方法
 - (void)renderToTextureWithVertices:(const GLfloat *)vertices textureCoordinates:(const GLfloat *)textureCoordinates;
 - (void)informTargetsAboutNewFrameAtTime:(CMTime)frameTime;
 - (CGSize)outputFrameSize;
 
 /// @name Input parameters
+// 设置清屏颜色
 - (void)setBackgroundColorRed:(GLfloat)redComponent green:(GLfloat)greenComponent blue:(GLfloat)blueComponent alpha:(GLfloat)alphaComponent;
+// 传值方法
 - (void)setInteger:(GLint)newInteger forUniformName:(NSString *)uniformName;
 - (void)setFloat:(GLfloat)newFloat forUniformName:(NSString *)uniformName;
 - (void)setSize:(CGSize)newSize forUniformName:(NSString *)uniformName;

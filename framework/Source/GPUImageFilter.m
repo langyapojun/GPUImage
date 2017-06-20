@@ -74,16 +74,21 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
     dispatch_semaphore_signal(imageCaptureSemaphore);
 
     runSynchronouslyOnVideoProcessingQueue(^{
+        // 初始化GL上下文对象
         [GPUImageContext useImageProcessingContext];
 
+        // 创建GL程序
         filterProgram = [[GPUImageContext sharedImageProcessingContext] programForVertexShaderString:vertexShaderString fragmentShaderString:fragmentShaderString];
         
         if (!filterProgram.initialized)
         {
+            // 初始化属性变量
             [self initializeAttributes];
             
+            // 链接着色器程序
             if (![filterProgram link])
             {
+                // 输出错误日志
                 NSString *progLog = [filterProgram programLog];
                 NSLog(@"Program link log: %@", progLog);
                 NSString *fragLog = [filterProgram fragmentShaderLog];
@@ -95,12 +100,17 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
             }
         }
         
+        // 获取顶点属性变量
         filterPositionAttribute = [filterProgram attributeIndex:@"position"];
+        // 获取纹理坐标属性变量
         filterTextureCoordinateAttribute = [filterProgram attributeIndex:@"inputTextureCoordinate"];
+        // 获取纹理统一变量
         filterInputTextureUniform = [filterProgram uniformIndex:@"inputImageTexture"]; // This does assume a name of "inputImageTexture" for the fragment shader
         
+        // 使用当前GL程序
         [GPUImageContext setActiveShaderProgram:filterProgram];
         
+        // 启动顶点属性数组
         glEnableVertexAttribArray(filterPositionAttribute);
         glEnableVertexAttribArray(filterTextureCoordinateAttribute);    
     });
@@ -167,29 +177,33 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
 
 #pragma mark -
 #pragma mark Still image processing
-
+// 需要生成图片则先消耗信号量，确保生成图片的时候GL绘制已经完成
 - (void)useNextFrameForImageCapture;
 {
     usingNextFrameForImageCapture = YES;
 
     // Set the semaphore high, if it isn't already
+    // 消耗信号量
     if (dispatch_semaphore_wait(imageCaptureSemaphore, DISPATCH_TIME_NOW) != 0)
     {
         return;
     }
 }
 
+// 等待渲染完成信号，如果接收到完成信号则生成图片
 - (CGImageRef)newCGImageFromCurrentlyProcessedOutput
 {
     // Give it three seconds to process, then abort if they forgot to set up the image capture properly
     double timeoutForImageCapture = 3.0;
     dispatch_time_t convertedTimeout = dispatch_time(DISPATCH_TIME_NOW, timeoutForImageCapture * NSEC_PER_SEC);
 
+    // 等待GL绘制完成，直到超时
     if (dispatch_semaphore_wait(imageCaptureSemaphore, convertedTimeout) != 0)
     {
         return NULL;
     }
 
+    // GL渲染完成且等待未超时则生成CGImage
     GPUImageFramebuffer* framebuffer = [self framebufferForOutput];
     
     usingNextFrameForImageCapture = NO;
@@ -217,7 +231,7 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
 
 #pragma mark -
 #pragma mark Rendering
-
+// 根据旋转方向获取纹理坐标
 + (const GLfloat *)textureCoordinatesForRotation:(GPUImageRotationMode)rotationMode;
 {
     static const GLfloat noRotationTextureCoordinates[] = {
@@ -289,6 +303,7 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
     }
 }
 
+// 进行GL绘制
 - (void)renderToTextureWithVertices:(const GLfloat *)vertices textureCoordinates:(const GLfloat *)textureCoordinates;
 {
     if (self.preventRendering)
@@ -308,6 +323,7 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
 
     [self setUniformsForProgramAtIndex:0];
     
+    // GL绘制
     glClearColor(backgroundColorRed, backgroundColorGreen, backgroundColorBlue, backgroundColorAlpha);
     glClear(GL_COLOR_BUFFER_BIT);
 
@@ -321,14 +337,18 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
     
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     
+    // 解锁输入帧缓存对象
     [firstInputFramebuffer unlock];
     
+    // 需要等待绘制完成才去生成图像
     if (usingNextFrameForImageCapture)
     {
+        // 发送渲染完成信号
         dispatch_semaphore_signal(imageCaptureSemaphore);
     }
 }
 
+// 绘制完成通知所有的target处理
 - (void)informTargetsAboutNewFrameAtTime:(CMTime)frameTime;
 {
     if (self.frameProcessingCompletionBlock != NULL)
@@ -337,6 +357,7 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
     }
     
     // Get all targets the framebuffer so they can grab a lock on it
+    // 传递帧缓存给所有target
     for (id<GPUImageInput> currentTarget in targets)
     {
         if (currentTarget != self.targetToIgnoreForUpdates)
@@ -362,12 +383,14 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
     }    
     
     // Trigger processing last, so that our unlock comes first in serial execution, avoiding the need for a callback
+    // 通知所有targets产生新的帧缓存
     for (id<GPUImageInput> currentTarget in targets)
     {
         if (currentTarget != self.targetToIgnoreForUpdates)
         {
             NSInteger indexOfObject = [targets indexOfObject:currentTarget];
             NSInteger textureIndex = [[targetTextureIndices objectAtIndex:indexOfObject] integerValue];
+            // 让所有target生成新的帧缓存
             [currentTarget newFrameReadyAtTime:frameTime atIndex:textureIndex];
         }
     }
@@ -554,7 +577,7 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
 
 #pragma mark -
 #pragma mark GPUImageInput
-
+// 生成新的帧缓存对象
 - (void)newFrameReadyAtTime:(CMTime)frameTime atIndex:(NSInteger)textureIndex;
 {
     static const GLfloat imageVertices[] = {
@@ -564,8 +587,10 @@ NSString *const kGPUImagePassthroughFragmentShaderString = SHADER_STRING
         1.0f,  1.0f, // 右上
     };
     
+    // 先渲染到帧缓存
     [self renderToTextureWithVertices:imageVertices textureCoordinates:[[self class] textureCoordinatesForRotation:inputRotation]];
 
+    // 通知所有的Targets
     [self informTargetsAboutNewFrameAtTime:frameTime];
 }
 

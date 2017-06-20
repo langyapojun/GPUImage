@@ -2,6 +2,9 @@
 
 extern NSString *const kGPUImageFourInputTextureVertexShaderString;
 
+/*!
+ *  将四个帧缓存对象的输入合并成一个帧缓存对象的输出
+ */
 @interface GPUImageFourInputFilter : GPUImageThreeInputFilter
 {
     GPUImageFramebuffer *fourthInputFramebuffer;
